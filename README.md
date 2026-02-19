@@ -1,119 +1,84 @@
-Step 1: Create a GKE Cluster
+                      Infrastructure creation’s
 
-Provision a Google Kubernetes Engine (GKE) cluster to host the monitoring stack.
+Step 1 Create a GKE cluster
 
-Step 2: Create a Dedicated Monitoring Namespace (Best Practice)
+Step 2 Create a Namespace monitor (good practice)
+ kubectl create ns monitor
 
-Create a separate namespace named monitor to isolate Prometheus and Grafana components.
+Step 3 go to helm repo (code) of Promothus and grafana      Helm code is available on 
+ https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack
 
-kubectl create ns monitor
-
-
-Step 3: Navigate to the Official Helm Repository for Prometheus & Grafana
-
-The Helm chart source code for Prometheus and Grafana (kube-prometheus-stack) is available at:
-
-https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack
-
-Step 4: Add the Prometheus Community Helm Repository
-
-Add the official Helm repository and update it locally.
+Step 4 Add the repo in helm 
 
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 
-
-Step 5: Install Prometheus and Grafana Using Helm
-
-Deploy the monitoring stack into the monitor namespace.
-
+Step 5 Install the Grafana and Promothus
 helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitor
 
-
-Explanation:
-
-kube-prometheus-stack → Release name (customizable)
-
-prometheus-community/kube-prometheus-stack → Chart name
-
-monitor → Namespace where the operator will be deployed
-
-Part 2 – Verification & Access
-
-Step 6: Verify the Installation
-
-Check whether all monitoring pods are running successfully.
-
-kubectl get pods -n monitor
+“kube-prometheus-stack” is the name of the release. You can change this if you want.
+“prometheus-community/kube-prometheus-stack” is the name of the chart.
+“monitor” is the name of the namespace where we are going to deploy the operator.
 
 
-Step 7: Create a Service for Grafana (Expose on Port 3000)
+------------part 2 -----------------
 
-Expose Grafana as a LoadBalancer service on port 3000.
+Step 6 You can verify your installation using:
+ kubectl get pods -n monitor
 
-kubectl expose deployment kube-prometheus-stack-grafana \
-  --port=3000 \
-  --target-port=3000 \
-  --name=grafana \
-  --type=LoadBalancer \
-  -n monitor
+Step 7 create a service of grafana 
 
+Grafana Service:- create a service of on 3000 port as a loadbalancer
 
-Step 8: Verify Service and Access Grafana
+or 
 
-Check the created service:
+kubectl expose deployment kube-prometheus-stack-grafana --port=3000 --target-port=3000 --name=grafana --type=LoadBalancer -n monitor
 
-kubectl get svc -n monitor
+Step 8 verify service and unlock Grafana 
+kubectl get svc -n monitor   admin/prom-operator
 
+Step 9 Explore Autoconfigured grafana dashboards 
 
-Default Login Credentials:
-
-Username: admin
-
-Password: prom-operator (or retrieve from secret)
-
-Retrieve admin password:
-
-kubectl --namespace monitor get secrets kube-prometheus-stack-grafana \
--o jsonpath="{.data.admin-password}" | base64 -d ; echo
-
-
-Step 9: Explore Auto-Configured Grafana Dashboards
-
-After logging in to Grafana, navigate to:
-
+Some Dashboards 
 General / Kubernetes / Compute Resources / Cluster
-
 General / Kubernetes / Compute Resources / Namespace (Pods)
 
-These dashboards are automatically provisioned by kube-prometheus-stack.
+Step 10 Delete the Helm chart
 
-Step 10: Delete the Helm Release (Cleanup)
+  helm uninstall [RELEASE_NAME]
 
-To uninstall the monitoring stack:
 
-helm uninstall kube-prometheus-stack --namespace monitor
+-------------------oUTPUT --------------
 
-Installation Output Example
+
+
+kube-prometheus-stack --namespace monitor
 NAME: kube-prometheus-stack
 LAST DEPLOYED: Wed Feb 18 03:47:29 2026
 NAMESPACE: monitor
 STATUS: deployed
 REVISION: 1
+
+
 DESCRIPTION: Install complete
-
-
-Check deployment status:
+NOTES:
+kube-prometheus-stack has been installed. Check its status by running:
+  kubectl --namespace monitor get pods -l "release=kube-prometheus-stack"
 
 kubectl get po -n monitor
 
-Access Grafana Locally (Port Forward)
-export POD_NAME=$(kubectl --namespace monitor get pod \
--l "app.kubernetes.io/name=grafana,app.kubernetes.io/instance=kube-prometheus-stack" -oname)
-
-kubectl --namespace monitor port-forward $POD_NAME 3000
 
 
-Access in browser:
+Get Grafana 'admin' user password by running:
 
-http://localhost:3000
+  kubectl --namespace monitor get secrets kube-prometheus-stack-grafana -o jsonpath="{.data.admin-password}" | base64 -d ; echo
+
+Access Grafana local instance:
+
+  export POD_NAME=$(kubectl --namespace monitor get pod -l "app.kubernetes.io/name=grafana,app.kubernetes.io/instance=kube-prometheus-stack" -oname)
+  kubectl --namespace monitor port-forward $POD_NAME 3000
+  
+  
+  
+
+Visit https://github.com/prometheus-operator/kube-prometheus for instructions on how to create & configure Alertmanager and Prometheus instances using the Operator.
